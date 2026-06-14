@@ -96,14 +96,14 @@ export function createPursuers(scene) {
   torchGeo.setAttribute('aPhase', new THREE.BufferAttribute(tph, 1));
   const torchMat = new THREE.ShaderMaterial({
     transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
-    uniforms: { uTime: { value: 0 }, uTex: { value: makeGlowTexture('rgba(255,180,90,1)', 'rgba(255,80,0,0)') }, uSize: { value: 90 } },
+    uniforms: { uTime: { value: 0 }, uTex: { value: makeGlowTexture('rgba(255,190,110,1)', 'rgba(255,70,0,0)') }, uSize: { value: 95 } },
     vertexShader: /* glsl */`
       attribute float aPhase; uniform float uTime, uSize; varying float vF;
       void main(){
         vF = 0.6 + 0.4*sin(uTime*15.0 + aPhase) + 0.2*sin(uTime*7.0+aPhase*2.0);
         vec4 mv = modelViewMatrix * vec4(position,1.0);
         gl_Position = projectionMatrix * mv;
-        gl_PointSize = uSize * vF * (300.0 / -mv.z);
+        gl_PointSize = min(uSize * vF * (300.0 / -mv.z), 140.0);
       }
     `,
     fragmentShader: /* glsl */`

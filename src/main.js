@@ -173,7 +173,7 @@ export async function boot() {
     const split = smoothstep(B.riseStart, B.riseEnd - 1.0, t);
     const holy = smoothstep(B.riseStart + 1.0, B.riseEnd + 3.0, t);
     const surge = smoothstep(B.surge, B.surge + 7.0, t);
-    const approach = Math.min(0.9, smoothstep(2.0, B.march + 10.0, t));
+    const approach = Math.min(0.96, smoothstep(2.0, B.lookBack + 1.0, t));
     // staff blazes up to part the sea, then recedes to a dim ember as we march
     const raise = smoothstep(B.riseStart - 0.3, B.riseStart + 1.5, t)
       * (1.0 - 0.82 * smoothstep(B.riseEnd, B.riseEnd + 5.0, t));
@@ -220,12 +220,13 @@ export async function boot() {
     tgtYaw += (uy - tgtYaw) * Math.min(1, dt * 4);
     tgtPitch += (up - tgtPitch) * Math.min(1, dt * 4);
 
-    // scripted glance back at the army
+    // scripted glance back at the army (turn back-and-down toward the host)
     const lb = bump(t, B.lookBack, 4.2);
     let yaw = tgtYaw + Math.sin(t * 0.18) * 0.05 + lb * 2.5;
     let pitch = tgtPitch + Math.sin(t * 0.27) * 0.015
       + smoothstep(B.riseStart, B.riseEnd, t) * (1 - st.rise) * 0.10   // look up as walls climb
-      + 0.04 * st.rise;
+      + 0.04 * st.rise
+      - lb * 0.12;                                                     // glance down at the pursuers
 
     // walking head-bob
     const walk = t * 5.2;
