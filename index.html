@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>MOSES · Parting the Sea — Immersive 3D</title>
+<meta name="description" content="Stand inside the fleeing crowd as the sea parts before you. Towering walls of water, an army closing from behind. A cinematic WebGL experience built with pure JavaScript & Three.js." />
+
+<!-- Open Graph / social preview for LinkedIn sharing -->
+<meta property="og:title" content="MOSES · Parting the Sea — Immersive 3D" />
+<meta property="og:description" content="Stand inside the fleeing crowd as the sea opens before you and the army closes behind. A cinematic WebGL experience — no install, just open the link." />
+<meta property="og:type" content="website" />
+<meta property="og:image" content="preview.jpg" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="theme-color" content="#05070d" />
+
+<style>
+  :root { --gold: #ffd27a; --ink: #eaf2ff; --sea:#7fd0e8; }
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #04060b; }
+  body { font-family: -apple-system, "Segoe UI", "Helvetica Neue", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif; color: var(--ink); cursor: default; }
+  canvas { display: block; position: fixed; inset: 0; }
+
+  /* ---------- Loading ---------- */
+  #loader {
+    position: fixed; inset: 0; z-index: 40; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 22px;
+    background: radial-gradient(120% 120% at 50% 35%, #0a1322 0%, #04060b 72%);
+    transition: opacity 1s ease; text-align: center; padding: 24px;
+  }
+  #loader.hidden { opacity: 0; pointer-events: none; }
+  .ring {
+    width: 56px; height: 56px; border-radius: 50%;
+    border: 2px solid rgba(127,208,232,.14); border-top-color: var(--sea);
+    animation: spin 1s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #loader p { letter-spacing: .38em; font-size: 12px; opacity: .6; text-transform: uppercase; }
+  #loaderErr { color:#ff9a9a; max-width:540px; font-size:13px; line-height:1.6; letter-spacing:normal; text-transform:none; display:none; }
+
+  /* ---------- Title / start ---------- */
+  #intro {
+    position: fixed; inset: 0; z-index: 30; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; text-align: center; padding: 28px;
+    background: linear-gradient(180deg, rgba(3,6,14,.62) 0%, rgba(3,6,14,.12) 42%, rgba(3,6,14,.72) 100%);
+    transition: opacity 1.2s ease;
+  }
+  #intro.hidden { opacity: 0; pointer-events: none; }
+  #intro .kicker { letter-spacing: .58em; font-size: 12px; opacity: .65; text-transform: uppercase; margin-bottom: 20px; padding-left:.58em; }
+  #intro h1 {
+    font-size: clamp(42px, 10.5vw, 122px); font-weight: 800; line-height: .9;
+    letter-spacing: .04em; margin-bottom: 10px;
+    background: linear-gradient(180deg, #ffffff 0%, #d4ecff 52%, #74b6e0 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    text-shadow: 0 8px 70px rgba(120,190,255,.28);
+  }
+  #intro h2 { font-size: clamp(15px, 3.6vw, 22px); font-weight: 300; letter-spacing: .42em; opacity: .8; margin-bottom: 4px; padding-left:.42em; }
+  #intro .verse { max-width: 640px; margin: 26px auto 32px; font-size: clamp(13px,3.4vw,16px); line-height: 1.85; opacity: .6; font-weight: 300; font-style: italic; }
+  .btn {
+    appearance: none; cursor: pointer; border: 1px solid rgba(127,208,232,.55);
+    background: linear-gradient(180deg, rgba(127,208,232,.18), rgba(127,208,232,.04));
+    color: var(--sea); padding: 17px 48px; border-radius: 999px;
+    font-size: 15px; letter-spacing: .3em; text-transform: uppercase; font-weight: 600;
+    backdrop-filter: blur(6px); transition: transform .25s ease, box-shadow .25s ease, background .25s ease;
+  }
+  .btn:hover { transform: translateY(-2px); box-shadow: 0 14px 46px rgba(127,208,232,.26); background: linear-gradient(180deg, rgba(127,208,232,.3), rgba(127,208,232,.08)); }
+  .btn:active { transform: translateY(0); }
+  #intro .hint { margin-top: 28px; font-size: 11px; letter-spacing: .26em; opacity: .38; text-transform: uppercase; }
+
+  /* ---------- In-experience HUD ---------- */
+  #hud { position: fixed; inset: 0; z-index: 20; pointer-events: none; opacity: 0; transition: opacity 1s ease; }
+  #hud.show { opacity: 1; }
+  #subtitle {
+    position: absolute; left: 50%; bottom: 12.5%; transform: translateX(-50%);
+    text-align: center; font-size: clamp(17px, 3.8vw, 28px); font-weight: 300; letter-spacing: .08em;
+    text-shadow: 0 2px 34px rgba(0,0,0,.85); max-width: 88vw; opacity: 0; transition: opacity .9s ease;
+    line-height: 1.5;
+  }
+  #subtitle .zh { display:block; font-size:.6em; opacity:.66; letter-spacing:.18em; margin-top:9px; }
+  #subtitle.on { opacity: 1; }
+  .topbar { position: absolute; top: 0; left: 0; right: 0; display: flex; justify-content: space-between; align-items: center; padding: 18px 22px; }
+  .brand { font-size: 12px; letter-spacing: .36em; opacity: .5; text-transform: uppercase; }
+  .tools { display: flex; gap: 10px; pointer-events: auto; }
+  .icon {
+    width: 42px; height: 42px; border-radius: 50%; cursor: pointer;
+    border: 1px solid rgba(234,242,255,.18); background: rgba(10,16,28,.4);
+    color: var(--ink); display: grid; place-items: center; font-size: 16px;
+    backdrop-filter: blur(8px); transition: background .2s, border-color .2s, transform .15s;
+  }
+  .icon:hover { background: rgba(127,208,232,.16); border-color: rgba(127,208,232,.5); }
+  .icon:active { transform: scale(.92); }
+  #explore-hint {
+    position: absolute; left: 50%; bottom: 4.5%; transform: translateX(-50%);
+    font-size: 11px; letter-spacing: .26em; text-transform: uppercase; opacity: 0;
+    transition: opacity 1s ease; text-align: center;
+  }
+  #explore-hint.on { opacity: .5; }
+  #replay { pointer-events: auto; }
+  .skip { position:absolute; bottom:22px; right:22px; pointer-events:auto; font-size:11px; letter-spacing:.2em; text-transform:uppercase; opacity:.4; cursor:pointer; border:1px solid rgba(234,242,255,.15); padding:8px 14px; border-radius:999px; transition:opacity .2s; }
+  .skip:hover { opacity:.85; }
+
+  /* cinematic letterbox bars */
+  .bar { position: fixed; left: 0; right: 0; height: 0; background: #000; z-index: 22; transition: height 1.4s cubic-bezier(.7,0,.2,1); pointer-events: none; }
+  .bar.top { top: 0; } .bar.bot { bottom: 0; }
+  body.cinema .bar { height: 7.5vh; }
+
+  @media (max-width: 600px) {
+    #intro .verse { margin: 18px auto 26px; }
+    .btn { padding: 15px 36px; }
+  }
+</style>
+</head>
+<body>
+  <!-- Loading screen -->
+  <div id="loader">
+    <div class="ring"></div>
+    <p>Gathering the multitude…</p>
+    <div id="loaderErr"></div>
+  </div>
+
+  <!-- Title screen -->
+  <div id="intro" class="hidden">
+    <div class="kicker">An immersive WebGL experience</div>
+    <h1>MOSES</h1>
+    <h2>PARTING&nbsp;&nbsp;THE&nbsp;&nbsp;SEA</h2>
+    <p class="verse">“And Moses stretched out his hand over the sea; and the LORD caused the sea to go back… and the waters were divided. And the children of Israel went into the midst of the sea upon the dry ground: and the waters were a wall unto them on their right hand, and on their left.” — Exodus 14</p>
+    <button class="btn" id="beginBtn">Enter the crowd</button>
+    <div class="hint">Headphones recommended · drag to look around</div>
+  </div>
+
+  <!-- Cinematic bars -->
+  <div class="bar top"></div>
+  <div class="bar bot"></div>
+
+  <!-- In-experience HUD -->
+  <div id="hud">
+    <div class="topbar">
+      <div class="brand">MOSES&nbsp;·&nbsp;PARTING&nbsp;THE&nbsp;SEA</div>
+      <div class="tools">
+        <div class="icon" id="audioBtn" title="Sound on/off">♪</div>
+        <div class="icon" id="replay" title="Replay">↺</div>
+      </div>
+    </div>
+    <div id="subtitle"></div>
+    <div id="explore-hint">Drag to look around · scroll to move</div>
+    <div class="skip" id="skipBtn">Skip ▸</div>
+  </div>
+
+  <!-- Three.js via CDN, ES modules, no build step -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+  <script type="module">
+    import { boot } from './src/main.js';
+    const loaderErr = document.getElementById('loaderErr');
+    boot().catch((e) => {
+      console.error(e);
+      loaderErr.style.display = 'block';
+      loaderErr.textContent = 'Failed to load the experience: ' + (e && e.message ? e.message : e) +
+        '  —  Please use an up-to-date browser with WebGL enabled.';
+    });
+    window.addEventListener('error', (ev) => {
+      if (loaderErr && loaderErr.style.display !== 'block') {
+        loaderErr.style.display = 'block';
+        loaderErr.textContent = 'Error: ' + (ev.message || ev.error);
+      }
+    });
+  </script>
+</body>
+</html>
